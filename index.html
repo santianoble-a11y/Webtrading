@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🥇 Alertas de Noticias – Oro</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--text:#e6edf3;
+        --muted:#8b949e;--alto:#f85149;--medio:#d29922;--bajo:#3fb950;--oro:#e3b341}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+  #banner{padding:6px 14px;font-size:12px;background:#10151c;border-bottom:1px solid var(--border);
+          max-height:64px;overflow:auto;line-height:1.6}
+  header{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;
+         justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+  h1{font-size:18px;margin:0;color:var(--oro)}
+  h2{font-size:15px;margin:0 0 6px}
+  #reloj{color:var(--muted);font-size:14px}
+  .panel{margin:16px;padding:14px;background:var(--panel);border:1px solid var(--border);border-radius:10px}
+  details.panel summary{cursor:pointer;color:var(--oro);font-weight:600}
+  .controles{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px;margin-bottom:6px}
+  .controles label{display:flex;align-items:center;gap:5px;cursor:pointer}
+  select,button,input[type=text]{background:#21262d;color:var(--text);border:1px solid var(--border);
+        border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer}
+  input[type=text]{cursor:text}
+  button:hover{background:#30363d}
+  button:disabled{opacity:.5;cursor:wait}
+  .destacado{border-color:var(--oro);color:var(--oro)}
+  .silencio{color:var(--alto)!important;border-color:var(--alto)!important}
+  .rango.activo,.chip.activo{background:var(--oro);color:#000;font-weight:700}
+  .estado{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase}
+  .impacto{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#000}
+  .i-alto{background:var(--alto)} .i-medio{background:var(--medio)} .i-bajo{background:var(--bajo)}
+  tr.alerta{animation:parpadeo 1s infinite;background:#3a1d1d}
+  tr.ya{opacity:.45}
+  @keyframes parpadeo{50%{background:#5c2020}}
+  .contador{color:var(--oro);font-weight:600;white-space:nowrap}
+  .acciones{white-space:nowrap}
+  .acciones a{text-decoration:none;font-size:16px}
+  .mini{padding:2px 7px;font-size:11px;border-radius:6px;border-color:var(--oro);color:var(--oro)}
+  .card{border:1px solid var(--border);border-left:5px solid var(--muted);
+        border-radius:8px;padding:10px 12px;margin-top:10px;background:#10151c}
+  .card.v-al{border-left-color:var(--bajo)} .card.v-bj{border-left-color:var(--alto)}
+  .cabecera{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .veredicto{font-weight:700;font-size:13px}
+  .v-al .veredicto{color:var(--bajo)} .v-bj .veredicto{color:var(--alto)} .v-nu .veredicto{color:var(--muted)}
+  .fuerza{font-size:11px;color:var(--medio);border:1px solid var(--border);border-radius:10px;padding:2px 8px}
+  .card a.titulo{color:var(--text);text-decoration:none;font-size:14px;font-weight:600;display:block;margin:6px 0 4px}
+  .card a.titulo:hover{color:var(--oro)}
+  .meta{color:var(--muted);font-size:11px}
+  .razones{color:var(--text);font-size:12px;margin-top:5px;background:#1a212b;border-radius:6px;padding:6px 8px}
+  .descargo{font-size:11px;color:var(--muted);margin-top:12px;border-top:1px solid var(--border);padding-top:8px}
+  .caja{background:#10151c;border:1px solid var(--border);border-radius:8px;
+        padding:10px 12px;font-size:13px;line-height:1.55;margin-top:8px}
+  .caja b.alcista{color:var(--bajo)} .caja b.bajista{color:var(--alto)} .caja b.neutro{color:var(--muted)}
+  #diagSalida table{font-size:12px;margin-top:8px} #diagSalida td{padding:5px 8px}
+</style>
+</head>
+<body>
+<div id="banner"><span class="estado">Iniciando…</span></div>
+
+<header>
+  <h1>🥇 Alertas de noticias – Oro (XAU/USD · XAU/EUR)</h1>
+  <div id="reloj">–</div>
+</header>
+
+<!-- ================= CALENDARIO ================= -->
+<div class="panel">
+  <div class="controles">
+    <button id="btnPermitir">🔔 Notificaciones</button>
+    <button id="btnProbar">🔊 Probar alarma</button>
+    <button id="btnSilenciar">🔕 Silenciar</button>
+    <label>Antelación:
+      <select id="antelacion">
+        <option value="5">5 min</option>
+        <option value="10">10 min</option>
+        <option value="15" selected>15 min</option>
+        <option value="30">30 min</option>
+        <option value="60">60 min</option>
+      </select>
+    </label>
+    <label><input type="checkbox" class="imp" value="High" checked> Alto</label>
+    <label><input type="checkbox" class="imp" value="Medium"> Medio</label>
+    <label><input type="checkbox" class="imp" value="Low"> Bajo</label>
+    <label><input type="checkbox" class="mon" value="USD" checked> USD</label>
+    <label><input type="checkbox" class="mon" value="EUR" checked> EUR</label>
+    <label><input type="checkbox" class="mon" value="ALL"> Todas</label>
+    <label title="Solo FOMC, NFP, CPI, Powell, Trump…">
+      <input type="checkbox" id="chkOro"> 🥇 Solo clave para oro</label>
+    <button id="btnRecargar">🔄 Recargar calendario</button>
+    <span class="estado" id="estado">…</span>
+  </div>
+  <table>
+    <thead><tr><th>Hora local</th><th>Mon.</th><th>Impacto</th><th>Evento</th>
+    <th>Anterior</th><th>Previsión</th><th>Cuenta atrás</th><th>📰</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="descargo">📰 = buscar el evento en Google News · 🔎N = noticias de ese evento ya cargadas abajo.</div>
+</div>
+
+<!-- ================= NOTICIAS ================= -->
+<div class="panel">
+  <h2>📰 Noticias y búsqueda por activo</h2>
+  <div class="controles">
+    <span class="estado">Activo:</span>
+    <span id="chips"></span>
+  </div>
+  <div class="controles">
+    <span class="estado">Periodo:</span>
+    <button class="rango" data-r="ayer">📅 Ayer</button>
+    <button class="rango activo" data-r="todos">📆 Todos</button>
+    <button class="rango" data-r="hoy">🕐 Hoy</button>
+    <button class="rango" data-r="manana">🌅 Mañana</button>
+    <button class="rango" data-r="sinfecha" title="Portadas cuya fecha no se pudo confirmar">📰 Sin fecha</button>
+    <label>Mostrar:
+      <select id="cantidad">
+        <option value="5" selected>Top 5</option>
+        <option value="10">Top 10</option>
+        <option value="50">Todas</option>
+      </select>
+    </label>
+  </div>
+  <div class="controles">
+    <input type="text" id="buscador" placeholder="🔎 yen, petroleo, oro, fed…" style="min-width:200px">
+    <button id="btnBuscar" class="destacado">🔎 Buscar</button>
+    <button id="btnLimpiar" title="Borrar búsqueda y filtros">✕</button>
+    <button id="btnNoticias">🔄 Actualizar</button>
+    <button id="btnIA" class="destacado">🧠 Interpretar</button>
+  </div>
+  <div id="resumenIA" style="display:none"></div>
+  <div class="estado" id="estadoFeeds" style="margin-top:8px">…</div>
+  <div id="listaNoticias" style="margin-top:8px"></div>
+  <div class="descargo">
+    ⚠️ Veredictos e interpretación: análisis automático por palabras clave. Guía orientativa, NO asesoramiento financiero.
+  </div>
+</div>
+
+<!-- ================= DIAGNÓSTICO ================= -->
+<details class="panel">
+  <summary>🔍 Diagnóstico y mantenimiento</summary>
+  <div style="margin-top:8px">
+    <button id="btnDiag">▶ Probar canales</button>
+    <button id="btnReset">🩹 Borrar caché guardada</button>
+    <div id="diagSalida"></div>
+  </div>
+</details>
+
+<script>
+"use strict";
+
+/* ============ 0. RED DE SEGURIDAD: errores VISIBLES ============ */
+var banner = document.getElementById("banner");
+function paso(msg, esError){
+  try{
+    var s = document.createElement("span");
+    s.textContent = msg + " · ";
+    s.style.color = esError ? "#f85149" : "#3fb950";
+    s.style.fontWeight = esError ? "700" : "400";
+    banner.appendChild(s);
+  }catch(e){}
+}
+window.onerror = function(msg, fuente, linea){
+  paso("⛔ " + msg + " (línea " + linea + ")", true);
+};
+window.addEventListener("unhandledrejection", function(ev){
+  var r = (ev && ev.reason) ? ev.reason : ev;
+  paso("⛔ " + ((r && r.message) ? r.message : String(r)), true);
+});
+
+/* ============ 1. UTILIDADES ============ */
+function $(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function sinAcentos(s){
+  return String(s == null ? "" : s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+}
+function aArr(x){ return Array.isArray(x) ? x : []; }
+function dormir(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function ttimeout(ms){
+  try{
+    var ctrl = new AbortController();
+    setTimeout(function(){ ctrl.abort(); }, ms);
+    return ctrl.signal;
+  }catch(e){ return undefined; }
+}
+function hoyCero(){ var d = new Date(); d.setHours(0,0,0,0); return d; }
+
+/* ============ 2. CANALES DE DESCARGA ============ */
+var TIMEOUT_MS = 15000;
+var CANALES = [
+  { nombre:"Directo",     wrap:function(u){ return u; } },
+  { nombre:"AllOrigins",  wrap:function(u){ return "https://api.allorigins.win/raw?url="+encodeURIComponent(u); } },
+  { nombre:"AllOrigins2", wrap:function(u){ return "https://api.allorigins.win/get?url="+encodeURIComponent(u); }, envuelto:true },
+  { nombre:"CodeTabs",    wrap:function(u){ return "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u); } },
+  { nombre:"Jina",        wrap:function(u){ return "https://r.jina.ai/"+u; } }
+];
+
+async function intentoCanal(c, url){
+  var r = await fetch(c.wrap(url), { cache:"no-store", signal: ttimeout(TIMEOUT_MS) });
+  if(!r.ok) throw new Error(c.nombre + ": HTTP " + r.status);
+  var t = (await r.text()).trim();
+  if(c.envuelto){
+    try{
+      var j = JSON.parse(t);
+      t = String((j && j.contents) ? j.contents : "").trim();
+    }catch(e){ throw new Error(c.nombre + ": envoltorio inválido"); }
+  }
+  if(!t) throw new Error(c.nombre + ": vacío");
+  return t;
+}
+function msgErr(e){
+  var m = (e && e.message) ? e.message : String(e);
+  if(e && e.name === "AbortError") return "sin respuesta (15 s)";
+  if(/aborted|timeout/i.test(m)) return "sin respuesta (15 s)";
+  return m;
+}
+function extraerJSON(t){
+  t = String(t == null ? "" : t).trim();
+  try{ JSON.parse(t); return t; }catch(e){}
+  var pos = [], a = t.indexOf("["), b = t.indexOf("{");
+  if(a >= 0) pos.push(a);
+  if(b >= 0) pos.push(b);
+  if(!pos.length) return null;
+  var ini = Math.min.apply(null, pos);
+  var fin = Math.max(t.lastIndexOf("]"), t.lastIndexOf("}"));
+  if(fin <= ini) return null;
+  var cand = t.slice(ini, fin + 1);
+  try{ JSON.parse(cand); return cand; }catch(e){ return null; }
+}
+function extraerXML(t){
+  t = String(t == null ? "" : t);
+  var i = t.search(/<\?xml|<rss[\s>]|<feed[\s>]/i);
+  return i >= 0 ? t.slice(i) : null;
+}
+function extraerTexto(t){
+  t = String(t == null ? "" : t);
+  return t.length > 400 ? t : null;
+}
+function parseXML(t){
+  var d = new DOMParser().parseFromString(t, "text/xml");
+  return d.querySelector("parsererror") ? null : d;
+}
+if(!Promise.any){
+  Promise.any = function(proms){
+    return new Promise(function(res, rej){
+      var n = proms.length, errs = [];
+      if(!n){ rej({ errors: [] }); return; }
+      proms.forEach(function(p, i){
+        Promise.resolve(p).then(res, function(e){
+          errs[i] = e; n--;
+          if(n === 0) rej({ errors: errs });
+        });
+      });
+    });
+  };
+}
+async function descargar(url, tipo){
+  var ex = tipo === "json" ? extraerJSON : (tipo === "xml" ? extraerXML : extraerTexto);
+  var intentos = CANALES.map(function(c){
+    return (async function(){
+      var t = await intentoCanal(c, url);
+      var v = ex(t);
+      if(!v) throw new Error(c.nombre + ": contenido no válido");
+      return v;
+    })();
+  });
+  try{
+    return await Promise.any(intentos);
+  }catch(e){
+    var errs = (e && e.errors) ? e.errors.map(msgErr) : [msgErr(e)];
+    throw new Error(errs.join(" | "));
+  }
+}
+
+/* ============ 3. CACHÉ ============ */
+function cacheGuardar(clave, datos){
+  try{ localStorage.setItem(clave, JSON.stringify({ ts: Date.now(), datos: datos })); }catch(e){}
+}
+function cacheLeer(clave){
+  try{
+    var c = JSON.parse(localStorage.getItem(clave));
+    if(c && aArr(c.datos).length) return c;
+  }catch(e){}
+  return null;
+}
+function cacheBorrar(){
+  try{ localStorage.removeItem("oro2_cal"); localStorage.removeItem("oro2_not"); }catch(e){}
+}
+function revivir(arr){
+  return aArr(arr).map(function(x){
+    if(!x) return null;
+    var o = {}, k;
+    for(k in x) o[k] = x[k];
+    o.fecha = x.fecha ? new Date(x.fecha) : null;
+    return o;
+  }).filter(function(x){ return x !== null; });
+}
+
+/* ============ 4. CONFIGURACIÓN ============ */
+var CALENDARIOS = [
+  { url:"https://nfs.faireconomy.media/ff_calendar_thisweek.json", tipo:"ff", nombre:"ForexFactory" },
+  { url:"https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json", tipo:"ff", nombre:"FF CDN" },
+  { url:"https://api.tradingeconomics.com/calendar?c=guest:guest&f=json", tipo:"te", nombre:"TradingEconomics" },
+  { url:"https://nfs.faireconomy.media/ff_calendar_nextweek.json", tipo:"ff", nombre:"FF próxima" }
+];
+var FUENTES_HTML = [
+  { nombre:"Kitco 🥇", url:"https://www.kitco.com/news/" },
+  { nombre:"ForexLive", url:"https://www.forexlive.com/news/" },
+  { nombre:"FXStreet", url:"https://www.fxstreet.com/news" },
+  { nombre:"Yahoo Finanzas", url:"https://finance.yahoo.com/topic/stock-market-news/" },
+  { nombre:"Finviz", url:"https://finviz.com/news.ashx" }
+];
+var FEED_RSS_ORO = "https://news.google.com/rss/search?q=gold+price+OR+XAU+when:1d&hl=en-US&gl=US&ceid=US:en";
+var ACTIVOS = [
+  { et:"🥇 Oro",       sinos:["oro","gold","xau","bullion"],                  q:"gold price XAUUSD" },
+  { et:"💵 Dólar",     sinos:["dollar","usd","dolar","dxy","greenback"],      q:"US dollar DXY" },
+  { et:"€ Euro",       sinos:["euro","eur","bce","ecb","lagarde"],            q:"euro EUR ecb" },
+  { et:"💴 Yen",       sinos:["yen","jpy","boj"],                             q:"japanese yen JPY" },
+  { et:"🍁 CAD",       sinos:["canadian","cad","loonie"],                     q:"canadian dollar CAD" },
+  { et:"£ Libra",      sinos:["pound","gbp","sterling","boe"],                q:"british pound GBP" },
+  { et:"🛢️ Petróleo",  sinos:["oil","crude","petroleo","wti","brent","opec"], q:"crude oil WTI OPEC" },
+  { et:"🥈 Plata",     sinos:["silver","plata","xag"],                        q:"silver price XAG" }
+];
+var REGION = { USD:"dollar", EUR:"euro", GBP:"pound UK", JPY:"yen", CHF:"franco",
+               CAD:"Canada", AUD:"Australia", NZD:"New Zealand", CNY:"China" };
+var CLAVES_ORO = ["fomc","fed","interest rate","cpi","non-farm","nonfarm","pce","ppi",
+  "powell","trump","unemployment","gdp","retail sales","ism","pmi","claims","jolts"];
+var CLASE_IMPACTO = { High:"i-alto", Medium:"i-medio", Low:"i-bajo", Holiday:"i-bajo" };
+
+/* ============ 5. MOTOR DE VEREDICTO ============ */
+var REGLAS_ORO = {
+  ALCISTA: [
+    ["gold rises|gold climbs|gold jumps|gold surges|gold gains|gold up|gold firms", 4, "el titular indica subida del oro"],
+    ["oro sube|oro avanza|oro gana", 4, "el titular indica subida del oro"],
+    ["dollar falls|dollar slips|dollar weakens|dollar drops|usd falls|dolar cae|dolar debil", 3, "dólar débil favorece al oro"],
+    ["dovish|rate cut|cuts rates|fed cuts|fed eases|fed pause|recorte de tipos", 3, "Fed flexible favorece al oro"],
+    ["safe haven|safe-haven|activo refugio", 2, "demanda de refugio"],
+    ["geopolitical|escalation|war|strikes|sanctions|conflict|attack|tensions|guerra|tension", 2, "tensión geopolítica → refugio"],
+    ["inflation rises|hotter inflation|inflation accelerates", 2, "inflación al alza (protección)"],
+    ["weak jobs|jobs miss|nfp miss|unemployment rises|layoffs", 2, "datos laborales débiles empujan al oro"],
+    ["recession fears|hard landing|recession", 2, "miedo a recesión → refugio"],
+    ["yields fall|yields drop|yields slide", 2, "rendimientos a la baja favorecen al oro"],
+    ["central bank.*buy|bancos centrales.*compr", 2, "compras de bancos centrales"]
+  ],
+  BAJISTA: [
+    ["gold falls|gold drops|gold slumps|gold slides|gold down|gold retreats", 4, "el titular indica caída del oro"],
+    ["oro cae|oro cede|oro baja", 4, "el titular indica caída del oro"],
+    ["dollar rises|dollar strengthens|dollar climbs|usd rises|dolar sube|dolar fuerte", 3, "dólar fuerte presiona al oro"],
+    ["hawkish|rate hike|hikes rates|higher for longer|fed hikes", 3, "Fed firme pesa sobre el oro"],
+    ["inflation cools|inflation slows|cpi cools|disinflation", 2, "inflación a la baja resta atractivo"],
+    ["strong jobs|jobs beat|nfp beat|unemployment falls", 2, "datos fuertes presionan al oro"],
+    ["yields rise|yields climb|yields jump|yields surge", 2, "rendimientos al alza pesan"],
+    ["peace|ceasefire|de-escalation|truce|alto el fuego", 2, "distensión resta refugio"],
+    ["risk-on|stocks rally", 1, "apetito por el riesgo"]
+  ]
+};
+var REGLAS_PETROLEO = {
+  ALCISTA: [
+    ["oil rises|crude climbs|oil gains|oil up|crude up|petroleo sube", 4, "el titular indica subida"],
+    ["opec.*cut|production cut|supply cut|output cut|stocks fall|inventories fall", 3, "menor oferta / inventarios a la baja"],
+    ["demand rises|demand recovery|china demand", 2, "mayor demanda"],
+    ["sanctions|supply disruption|pipeline|embargo|war|attack", 2, "riesgo para la oferta"],
+    ["dollar falls|dollar weakens|dolar debil", 2, "dólar débil abarata el crudo"]
+  ],
+  BAJISTA: [
+    ["oil falls|crude drops|oil slumps|oil down|crude slides|petroleo cae", 4, "el titular indica caída"],
+    ["opec.*increase|output rise|oversupply|stocks rise|inventories build", 3, "mayor oferta / inventarios al alza"],
+    ["demand fears|demand slows|demand concern", 2, "temor por la demanda"],
+    ["peace|ceasefire|deal|alto el fuego", 1, "distensión quita prima de riesgo"],
+    ["dollar rises|dollar strengthens|dolar fuerte", 2, "dólar fuerte encarece el crudo"]
+  ]
+};
+var REGLAS_GEN = {
+  ALCISTA: [
+    ["rises|climbs|jumps|surges|gains|firms|rally|rallies|\\bup\\b", 3, "el titular indica subida"],
+    ["stronger|strengthens|beats|hotter", 2, "datos más fuertes de lo previsto"],
+    ["hawkish|rate hike", 2, "tono firme suele fortalecer la divisa"]
+  ],
+  BAJISTA: [
+    ["falls|drops|slumps|slides|retreats|declines|\\bdown\\b", 3, "el titular indica caída"],
+    ["weaker|weakens|misses|cooler", 2, "datos más flojos de lo previsto"],
+    ["dovish|rate cut|easing", 2, "tono flexible suele debilitar la divisa"]
+  ]
+};
+function analizarCon(titulo, reglas){
+  var t = sinAcentos(titulo), sc = 0, rz = [], i;
+  for(i = 0; i < reglas.ALCISTA.length; i++){
+    var pa = reglas.ALCISTA[i];
+    if(new RegExp(pa[0], "i").test(t)){ sc += pa[1]; rz.push("📈 " + pa[2]); }
+  }
+  for(i = 0; i < reglas.BAJISTA.length; i++){
+    var pb = reglas.BAJISTA[i];
+    if(new RegExp(pb[0], "i").test(t)){ sc -= pb[1]; rz.push("📉 " + pb[2]); }
+  }
+  var dir = sc >= 2 ? "ALCISTA" : (sc <= -2 ? "BAJISTA" : "NEUTRO");
+  var unicas = rz.filter(function(x, idx){ return rz.indexOf(x) === idx; });
+  return { dir: dir, score: sc, razones: unicas.slice(0, 3) };
+}
+
+/* ============ 6. ESTADO ============ */
+var eventos = [], noticias = [];
+var avisados = {};
+var silenciado = false;
+var rango = "todos";
+var chipSel = "";
+var textoBusqueda = "";
+var filtroEvento = null;
+var CLASE_V = { ALCISTA:"v-al", BAJISTA:"v-bj", NEUTRO:"v-nu" };
+var TEXTO_V = { ALCISTA:"📈 Sesgo de COMPRA", BAJISTA:"📉 Sesgo de VENTA", NEUTRO:"➖ Sin señal clara" };
+
+function contextoActual(){
+  var t = sinAcentos(textoBusqueda + " " + chipSel);
+  if(/petr|oil|crude|opec|brent|wti/.test(t)) return { reglas:REGLAS_PETROLEO, sujeto:"el petróleo" };
+  if(/oro|gold|xau|plata|silver|xag|bullion/.test(t)) return { reglas:REGLAS_ORO, sujeto:"el oro" };
+  if(textoBusqueda || chipSel) return { reglas:REGLAS_GEN, sujeto:(textoBusqueda || chipSel) };
+  return { reglas:REGLAS_ORO, sujeto:"el oro" };
+}
+
+/* ============ 7. CALENDARIO ============ */
+function impactoNorm(v){
+  if(typeof v === "number"){
+    if(v >= 3) return "High";
+    if(v === 2) return "Medium";
+    return "Low";
+  }
+  var s = String(v == null ? "" : v).toLowerCase();
+  if(s.charAt(0) === "h" || s === "3") return "High";
+  if(s.charAt(0) === "m" || s === "2") return "Medium";
+  return "Low";
+}
+function mapearFF(d){
+  return aArr(d).map(function(e){
+    return {
+      titulo: e.title || "Evento",
+      moneda: String(e.country || "").toUpperCase(),
+      impacto: impactoNorm(e.impact),
+      fecha: new Date(e.date),
+      prevision: e.forecast || "–",
+      anterior: e.previous || "–"
+    };
+  }).filter(function(e){ return e.fecha && !isNaN(e.fecha.getTime()); })
+    .sort(function(a, b){ return a.fecha - b.fecha; });
+}
+var TE_MONEDA = { "United States":"USD","Euro Area":"EUR","Germany":"EUR","France":"EUR",
+  "Italy":"EUR","Spain":"EUR","Netherlands":"EUR","Ireland":"EUR","Portugal":"EUR",
+  "Austria":"EUR","Belgium":"EUR","Greece":"EUR","Finland":"EUR",
+  "European Monetary Union":"EUR","United Kingdom":"GBP","Japan":"JPY","China":"CNY",
+  "Switzerland":"CHF","Canada":"CAD","Australia":"AUD","New Zealand":"NZD" };
+function mapearTE(d){
+  return aArr(d).slice(0, 400).map(function(e){
+    var pais = e.Country || "";
+    return {
+      titulo: e.Event || e.Category || "Evento",
+      moneda: TE_MONEDA[pais] || pais.slice(0, 3).toUpperCase(),
+      impacto: impactoNorm(e.Importance != null ? e.Importance : "Medium"),
+      fecha: new Date(e.Date),
+      prevision: e.Forecast || "–",
+      anterior: e.Previous || "–"
+    };
+  }).filter(function(e){ return e.fecha && !isNaN(e.fecha.getTime()); })
+    .sort(function(a, b){ return a.fecha - b.fecha; });
+}
+var reintCal = 0;
+async function cargarCalendario(){
+  $("estado").textContent = "Cargando calendario…";
+  for(var i = 0; i < CALENDARIOS.length; i++){
+    var cal = CALENDARIOS[i];
+    try{
+      var tx = await descargar(cal.url, "json");
+      var datos = JSON.parse(tx);
+      var lista = (cal.tipo === "ff") ? mapearFF(datos) : mapearTE(datos);
+      if(!lista.length) throw new Error("sin eventos");
+      eventos = lista;
+      avisados = {};
+      reintCal = 0;
+      cacheGuardar("oro2_cal", eventos);
+      recalcularCoincidencias();
+      $("estado").textContent = "✔ " + eventos.length + " eventos (" + cal.nombre + ") · " + new Date().toLocaleTimeString();
+      pintarTabla();
+      paso("✓ calendario: " + eventos.length + " eventos");
+      return;
+    }catch(e){ /* prueba la siguiente fuente */ }
+  }
+  var c = cacheLeer("oro2_cal");
+  if(c){
+    eventos = revivir(c.datos);
+    recalcularCoincidencias();
+    pintarTabla();
+    $("estado").textContent = "✘ Sin conexión · 📦 caché del " + new Date(c.ts).toLocaleString("es-ES");
+    paso("⚠ calendario desde caché", true);
+  }else{
+    $("estado").textContent = "✘ Calendario no disponible.";
+    paso("⛔ calendario sin acceso", true);
+    reintCal++;
+    if(reintCal <= 5) setTimeout(cargarCalendario, 60000);
+  }
+}
+function esClaveOro(ev){
+  var t = ev.titulo.toLowerCase();
+  for(var i = 0; i < CLAVES_ORO.length; i++)
+    if(t.indexOf(CLAVES_ORO[i]) >= 0) return true;
+  return false;
+}
+function visible(ev){
+  var imp = Array.prototype.slice.call(document.querySelectorAll(".imp:checked"))
+            .map(function(c){ return c.value.toLowerCase(); });
+  if(imp.indexOf(ev.impacto.toLowerCase()) < 0) return false;
+  if($("chkOro").checked) return esClaveOro(ev);
+  var mo = Array.prototype.slice.call(document.querySelectorAll(".mon:checked"))
+           .map(function(c){ return c.value.toUpperCase(); });
+  return mo.indexOf("ALL") >= 0 || mo.indexOf(ev.moneda.toUpperCase()) >= 0;
+}
+function fmtCuenta(ms){
+  var fut = ms > 0, s = Math.abs(Math.floor(ms / 1000)), d, h, m, txt;
+  d = Math.floor(s / 86400); s = s % 86400;
+  h = Math.floor(s / 3600);  s = s % 3600;
+  m = Math.floor(s / 60);    s = s % 60;
+  txt = d ? (d + "d " + h + "h " + m + "m") : (h ? (h + "h " + m + "m " + s + "s") : (m + "m " + s + "s"));
+  return fut ? ("en " + txt) : ("hace " + txt);
+}
+function queryEvento(ev){
+  var base = ev.titulo.replace(/\([^)]*\)/g, " ")
+    .replace(/\b(m\/m|q\/q|y\/y|w\/w|n\/a)\b/gi, " ")
+    .replace(/\s+/g, " ").trim();
+  return encodeURIComponent((base + " " + (REGION[ev.moneda] || "")).trim());
+}
+function pintarTabla(){
+  var tb = $("tbody");
+  if(!tb) return;
+  tb.innerHTML = "";
+  var ahora = Date.now();
+  eventos.filter(visible).forEach(function(ev){
+    var diff = ev.fecha - ahora;
+    var key = ev.titulo + ev.fecha.getTime();
+    var tr = document.createElement("tr");
+    if(diff < 0) tr.className = "ya";
+    else if(avisados[key]) tr.className = "alerta";
+    var btn = ev.coinc ? (' <button class="mini" data-ev="' + esc(key) + '">🔎' + ev.coinc + '</button>') : "";
+    tr.innerHTML =
+      '<td>' + ev.fecha.toLocaleString("es-ES", { weekday:"short", day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }) + '</td>' +
+      '<td><b>' + esc(ev.moneda) + '</b></td>' +
+      '<td><span class="impacto ' + (CLASE_IMPACTO[ev.impacto] || "i-bajo") + '">' + esc(ev.impacto) + '</span></td>' +
+      '<td>' + (esClaveOro(ev) ? "🥇 " : "") + esc(ev.titulo) + '</td>' +
+      '<td>' + esc(ev.anterior) + '</td>' +
+      '<td>' + esc(ev.prevision) + '</td>' +
+      '<td class="contador">' + fmtCuenta(diff) + '</td>' +
+      '<td class="acciones"><a href="https://news.google.com/search?q=' + queryEvento(ev) + '" target="_blank" rel="noopener" title="Buscar en Google News">📰</a>' + btn + '</td>';
+    tb.appendChild(tr);
+  });
+}
+
+/* ============ 8. EVENTO → NOTICIAS ============ */
+var STOP = { rate:1, the:1, and:1, for:1, change:1, index:1, month:1, claims:1,
+  del:1, las:1, los:1, una:1, que:1, con:1, por:1, para:1, sobre:1 };
+function palabrasClave(ev){
+  return sinAcentos(ev.titulo.toLowerCase())
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter(function(w){ return w.length >= 3 && !STOP[w]; })
+    .slice(0, 3);
+}
+function recalcularCoincidencias(){
+  eventos.forEach(function(ev){
+    ev.kw = palabrasClave(ev);
+    ev.coinc = 0;
+    if(ev.kw.length){
+      ev.coinc = noticias.filter(function(n){
+        var t = sinAcentos(n.titulo || "");
+        return ev.kw.some(function(k){ return t.indexOf(k) >= 0; });
+      }).length;
+    }
+  });
+}
+ $("tbody").addEventListener("click", function(e){
+  var b = e.target.closest ? e.target.closest("[data-ev]") : null;
+  if(!b) return;
+  var key = b.getAttribute("data-ev");
+  var ev = eventos.filter(function(x){ return (x.titulo + x.fecha.getTime()) === key; })[0];
+  if(ev && ev.kw && ev.kw.length){
+    filtroEvento = ev.kw;
+    $("buscador").value = ev.kw.join(" ");
+    textoBusqueda = ev.kw.join(" ");
+    setRango("todos");
+    renderNoticias();
+    renderResumen();
+    $("listaNoticias").scrollIntoView({ behavior:"smooth" });
+  }
+});
+
+/* ============ 9. ALARMAS ============ */
+function comprobarAlertas(){
+  try{
+    var min = parseInt($("antelacion").value, 10) || 15;
+    var ahora = Date.now();
+    eventos.filter(visible).forEach(function(ev){
+      var diff = ev.fecha - ahora;
+      var key = ev.titulo + ev.fecha.getTime();
+      if(diff > 0 && diff <= min * 60000 && !avisados[key]){
+        avisados[key] = true;
+        sonarAlarma();
+        var falt = Math.max(1, Math.round(diff / 60000));
+        if(window.Notification && Notification.permission === "granted"){
+          try{
+            new Notification("⚠️ " + ev.moneda + " en " + falt + " min: " + ev.titulo,
+              { body:"Impacto " + ev.impacto + " · Previsión: " + ev.prevision + " · Anterior: " + ev.anterior });
+          }catch(e){}
+        }
+        document.title = "🚨 ALERTA – NOTICIA INMINENTE";
+        setTimeout(function(){ document.title = "🥇 Alertas de noticias – Oro"; }, 30000);
+      }
+    });
+  }catch(e){}
+}
+var ctxAudio = null;
+function sonarAlarma(){
+  if(silenciado) return;
+  try{
+    if(!ctxAudio) ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
+    var t0 = ctxAudio.currentTime;
+    for(var i = 0; i < 5; i++){
+      var o = ctxAudio.createOscillator();
+      var g = ctxAudio.createGain();
+      o.type = "sine"; o.frequency.value = 880;
+      o.connect(g); g.connect(ctxAudio.destination);
+      var ini = t0 + i * 0.4;
+      g.gain.setValueAtTime(0.0001, ini);
+      g.gain.exponentialRampToValueAtTime(0.3, ini + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, ini + 0.3);
+      o.start(ini); o.stop(ini + 0.35);
+    }
+  }catch(e){}
+}
+
+/* ============ 10. FECHAS DESDE TEXTO / URL ============ */
+var MESES = { enero:0, febrero:1, marzo:2, abril:3, mayo:4, junio:5, julio:6,
+  agosto:7, septiembre:8, setiembre:8, octubre:9, noviembre:10, diciembre:11,
+  january:0, february:1, march:2, april:3, may:4, june:5, july:6, august:7,
+  september:8, october:9, november:10, december:11,
+  jan:0, feb:1, mar:2, apr:3, jun:5, jul:6, aug:7, sep:8, sept:8, oct:9, nov:10, dec:11 };
+function fechaDeTexto(t){
+  if(!t) return null;
+  var m;
+  m = t.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  m = t.match(/(\d{1,2})\s+de\s+([a-z]+)/i);
+  if(m && MESES[m[2].toLowerCase()] !== undefined)
+    return new Date(new Date().getFullYear(), MESES[m[2].toLowerCase()], +m[1]);
+  m = t.match(/([a-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})/i);
+  if(m && MESES[m[1].toLowerCase()] !== undefined)
+    return new Date(+m[3], MESES[m[1].toLowerCase()], +m[2]);
+  m = t.match(/(\d{1,2})\s+([a-z]{3,9})\s+(\d{4})/i);
+  if(m && MESES[m[2].toLowerCase()] !== undefined)
+    return new Date(+m[3], MESES[m[2].toLowerCase()], +m[1]);
+  m = t.match(/hace\s+(\d+)\s*(min|minuto|hora|dia)/i) ||
+      t.match(/(\d+)\s*(minutes?|mins?|hours?|hrs?|days?)\s+ago/i);
+  if(m){
+    var n = +m[1], u = sinAcentos(m[2]);
+    var ms = (u.indexOf("min") === 0) ? 60000 : (u.charAt(0) === "h" ? 3600000 : 86400000);
+    return new Date(Date.now() - n * ms);
+  }
+  return null;
+}
+function fechaDeURL(u){
+  var m = String(u || "").match(/\/(\d{4})\/(\d{1,2})\/(\d{1,2})\//);
+  if(m){
+    var d = new Date(+m[1], +m[2] - 1, +m[3]);
+    if(d.getTime() <= Date.now()) return d;
+  }
+  return null;
+}
+function hace(f){
+  if(!f) return "sin fecha confirmada";
+  var s = Math.floor((Date.now() - f.getTime()) / 1000);
+  if(s < 0) return "reciente";
+  if(s < 60) return "ahora mismo";
+  if(s < 3600) return "hace " + Math.floor(s / 60) + " min";
+  if(s < 86400) return "hace " + Math.floor(s / 3600) + " h";
+  return "hace " + Math.floor(s / 86400) + " d";
+}
+
+/* ============ 11. TITULARES DE PORTADAS ============ */
+var PROHIBIDO = /sign in|sign up|subscribe|newsletter|log ?in|register|advertise|privacy|cookie|terms of|contact us|about us|download|app store|podcast|watchlist|my account|help center|menu|homepage|facebook|twitter|youtube|instagram/i;
+function limpiar(t){
+  return String(t || "").replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s\-–•|·]+/, "").replace(/[\s\-–•|·]+$/, "").trim();
+}
+function extraerTitulares(texto){
+  var res = [], vistos = {}, m;
+  function add(titulo, url, ctx){
+    titulo = limpiar(titulo);
+    if(titulo.length < 30 || titulo.length > 220) return;
+    if(PROHIBIDO.test(titulo)) return;
+    if(!url || !/^https?:\/\//.test(url)) return;
+    if(/\.(jpg|jpeg|png|webp|gif|svg|css|js|ico|pdf)(\?|$)/i.test(url)) return;
+    var k = titulo.toLowerCase().slice(0, 55);
+    if(vistos[k]) return;
+    vistos[k] = 1;
+    var f = fechaDeURL(url) || fechaDeTexto(ctx || "");
+    res.push({ titulo: titulo, url: url, fecha: f });
+  }
+  var re = /\[([^\]\n]{30,300})\]\((https?:\/\/[^\s)"]+)\)/g;
+  while((m = re.exec(texto)) !== null){
+    var ctx = texto.slice(Math.max(0, m.index - 260), m.index + m[0].length + 160);
+    add(m[1], m[2], ctx);
+  }
+  if(res.length < 4){
+    var re2 = /<a[^>]+href=["'](https?:\/\/[^"']{10,500})["'][^>]*>([\s\S]{10,400}?)<\/a>/gi;
+    while((m = re2.exec(texto)) !== null){
+      var ctx2 = texto.slice(Math.max(0, m.index - 200), m.index + m[0].length + 120);
+      add(m[2], m[1], ctx2);
+    }
+  }
+  return res.slice(0, 12);
+}
+
+/* ============ 12. NOTICIAS ============ */
+function claveNoticia(n){ return sinAcentos(n.titulo || "").slice(0, 55); }
+function empujar(n){
+  if(!n.titulo) return;
+  var k = claveNoticia(n);
+  for(var i = 0; i < noticias.length; i++)
+    if(claveNoticia(noticias[i]) === k) return;
+  noticias.push(n);
+}
+function relevancia(titulo, fecha){
+  var r = 0, t = sinAcentos(titulo);
+  if(/\bgold\b|\bxau\b|\boro\b/.test(t)) r += 5;
+  if(/fed|fomc|powell|trump|tariff/.test(t)) r += 3;
+  if(/dollar|usd|inflation|cpi|nfp|jobs|oil|opec|yen|jpy/.test(t)) r += 2;
+  if(/war|geopolitic|central bank|banco central/.test(t)) r += 2;
+  if(fecha && fecha.getTime() >= hoyCero().getTime()) r += 2;
+  return r;
+}
+async function cargarPortadas(){
+  var est = [];
+  var tareas = FUENTES_HTML.map(function(h, i){
+    return (async function(){
+      await dormir(i * 1200);
+      try{
+        var tx = await descargar(h.url, "texto");
+        var ls = extraerTitulares(tx);
+        ls.forEach(function(l){
+          empujar({
+            titulo: l.titulo, fuente: h.nombre, fecha: l.fecha, url: l.url,
+            rel: relevancia(l.titulo, l.fecha) + (l.fecha ? 0 : -1)
+          });
+        });
+        est.push(ls.length ? "✔ " + h.nombre + " (" + ls.length + ")" : "⚠ " + h.nombre + " sin titulares");
+      }catch(e){ est.push("✘ " + h.nombre); }
+    })();
+  });
+  await Promise.all(tareas);
+  return est;
+}
+async function cargarRSSGoogle(){
+  var est = [];
+  try{
+    var tx = await descargar(FEED_RSS_ORO, "xml");
+    var doc = parseXML(tx);
+    if(!doc) throw new Error("xml inválido");
+    var items = doc.querySelectorAll("item"), n = 0;
+    for(var i = 0; i < items.length && i < 12; i++){
+      var te = items[i].querySelector("title");
+      var pe = items[i].querySelector("pubDate");
+      var le = items[i].querySelector("link");
+      var t = te ? te.textContent : "";
+      var fe = pe ? new Date(pe.textContent) : new Date();
+      if(isNaN(fe.getTime())) fe = new Date();
+      empujar({ titulo:t, fuente:"Google News · Oro", fecha:fe, url: le ? le.textContent : "#", rel: relevancia(t, fe) });
+      n++;
+    }
+    est.push("✔ Google Oro (" + n + ")");
+  }catch(e){
+    try{
+      var tx2 = await descargar("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(FEED_RSS_ORO), "json");
+      var j = JSON.parse(tx2), n2 = 0;
+      aArr(j.items).slice(0, 12).forEach(function(it){
+        var t = it.title || "";
+        var fe = new Date((it.pubDate || "").replace(" ", "T"));
+        if(isNaN(fe.getTime())) fe = new Date();
+        empujar({ titulo:t, fuente:"Google News · Oro", fecha:fe, url: it.link || "#", rel: relevancia(t, fe) });
+        n2++;
+      });
+      est.push(n2 ? "✔ Google Oro rss2json (" + n2 + ")" : "✘ Google Oro");
+    }catch(e2){ est.push("✘ Google Oro"); }
+  }
+  return est;
+}
+async function cargarNoticias(){
+  var btn = $("btnNoticias");
+  btn.disabled = true;
+  $("listaNoticias").innerHTML = "<div class='estado'>⏳ Consultando fuentes en paralelo…</div>";
+  var est = [];
+  try{
+    var res = await Promise.all([cargarPortadas(), cargarRSSGoogle()]);
+    est = res[0].concat(res[1]);
+  }catch(e){ est.push("✘ error: " + e.message); }
+  $("estadoFeeds").textContent = est.join(" · ") + " · act. " + new Date().toLocaleTimeString();
+  btn.disabled = false;
+  recalcularCoincidencias();
+  if(!noticias.length){
+    var c = cacheLeer("oro2_not");
+    if(c){
+      noticias = revivir(c.datos);
+      recalcularCoincidencias();
+      renderNoticias();
+      $("estadoFeeds").textContent += " · 📦 mostrando caché";
+    }else{
+      $("listaNoticias").innerHTML = "<div class='estado'>✘ Ninguna fuente respondió. Abre 🔍 Diagnóstico abajo y pásame el resultado.</div>";
+    }
+    return;
+  }
+  cacheGuardar("oro2_not", noticias);
+  renderNoticias();
+  paso("✓ noticias: " + noticias.length);
+}
+
+/* ============ 13. BÚSQUEDA EN VIVO ============ */
+async function buscarEnVivo(termino){
+  var urlG = "https://news.google.com/rss/search?q=" + encodeURIComponent(termino) + "+when:2d&hl=es&gl=ES&ceid=ES:es";
+  var agregados = 0;
+  try{
+    var tx = await descargar("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(urlG), "json");
+    var j = JSON.parse(tx);
+    aArr(j.items).slice(0, 15).forEach(function(it){
+      var t = it.title || "";
+      var fe = new Date((it.pubDate || "").replace(" ", "T"));
+      if(isNaN(fe.getTime())) fe = new Date();
+      empujar({ titulo:t, fuente:"🔎 Búsqueda: " + termino, fecha:fe, url: it.link || "#", rel: relevancia(t, fe) + 3 });
+      agregados++;
+    });
+  }catch(e){
+    try{
+      var tx2 = await descargar(urlG, "xml");
+      var doc = parseXML(tx2);
+      if(doc){
+        var items = doc.querySelectorAll("item");
+        for(var i = 0; i < items.length && i < 15; i++){
+          var te = items[i].querySelector("title");
+          var pe = items[i].querySelector("pubDate");
+          var le = items[i].querySelector("link");
+          var t = te ? te.textContent : "";
+          var fe = pe ? new Date(pe.textContent) : new Date();
+          if(isNaN(fe.getTime())) fe = new Date();
+          empujar({ titulo:t, fuente:"🔎 Búsqueda: " + termino, fecha:fe, url: le ? le.textContent : "#", rel: relevancia(t, fe) + 3 });
+          agregados++;
+        }
+      }
+    }catch(e2){}
+  }
+  return agregados;
+}
+function activoSeleccionado(){
+  for(var i = 0; i < ACTIVOS.length; i++)
+    if(ACTIVOS[i].et === chipSel) return ACTIVOS[i];
+  return null;
+}
+async function ejecutarBusqueda(){
+  textoBusqueda = $("buscador").value.trim();
+  filtroEvento = null;
+  var termino = textoBusqueda;
+  if(chipSel){
+    var a = activoSeleccionado();
+    if(a) termino = a.q;
+  }
+  if(!termino){ renderNoticias(); renderResumen(); return; }
+  var btn = $("btnBuscar");
+  btn.disabled = true;
+  $("estadoFeeds").textContent = "🔎 Buscando «" + termino + "» en Google News…";
+  var n = 0;
+  try{ n = await buscarEnVivo(termino); }catch(e){}
+  btn.disabled = false;
+  $("estadoFeeds").textContent += " · +" + n + " resultados";
+  recalcularCoincidencias();
+  renderNoticias();
+  renderResumen();
+}
+
+/* ============ 14. FILTROS Y RENDER ============ */
+function sinonimos(p){
+  if(p === "oro" || p === "oros") return ["gold","xau","bullion"];
+  if(p === "gold" || p === "xau") return ["oro","bullion"];
+  if(p === "dolar" || p === "dolares" || p === "usd") return ["dollar","greenback","dxy"];
+  if(p === "fed" || p === "fomc") return ["powell","reserve"];
+  if(p === "inflacion") return ["cpi","inflation","ipc"];
+  if(p === "petroleo" || p === "crudo") return ["oil","crude","opec"];
+  return [];
+}
+function coincide(n){
+  var t = sinAcentos((n.titulo || "") + " " + (n.fuente || ""));
+  if(chipSel){
+    var a = activoSeleccionado();
+    if(a){
+      for(var i = 0; i < a.sinos.length; i++)
+        if(t.indexOf(a.sinos[i]) >= 0) return true;
+      return false;
+    }
+  }
+  var q = sinAcentos(textoBusqueda).trim();
+  if(!q) return true;
+  var parts = q.split(/\s+/);
+  for(var j = 0; j < parts.length; j++){
+    var p = parts[j];
+    var ok = t.indexOf(p) >= 0;
+    if(!ok){
+      var sin = sinonimos(p);
+      for(var k = 0; k < sin.length; k++)
+        if(t.indexOf(sin[k]) >= 0){ ok = true; break; }
+    }
+    if(!ok) return false;
+  }
+  return true;
+}
+function listaFiltrada(){
+  var h0 = hoyCero().getTime();
+  var ay = h0 - 86400000, ma = h0 + 86400000;
+  var l = noticias.filter(function(n){
+    var f = n.fecha ? n.fecha.getTime() : null;
+    if(rango === "ayer"   && (!f || f < ay || f >= h0)) return false;
+    if(rango === "hoy"    && (!f || f < h0)) return false;
+    if(rango === "manana" && (!f || f < ma)) return false;
+    if(rango === "sinfecha" && f) return false;
+    if(filtroEvento){
+      var t = sinAcentos((n.titulo || "") + " " + (n.fuente || ""));
+      var ok = false;
+      for(var i = 0; i < filtroEvento.length; i++)
+        if(t.indexOf(filtroEvento[i]) >= 0){ ok = true; break; }
+      if(!ok) return false;
+    }else if(!coincide(n)) return false;
+    return true;
+  });
+  l.sort(function(a, b){
+    var d = b.rel - a.rel;
+    if(d !== 0) return d;
+    var fa = a.fecha ? a.fecha.getTime() : 0;
+    var fb = b.fecha ? b.fecha.getTime() : 0;
+    return fb - fa;
+  });
+  return l;
+}
+function renderNoticias(){
+  var cont = $("listaNoticias");
+  if(!cont) return;
+  var ctx = contextoActual();
+  var l = listaFiltrada();
+  if(!l.length){
+    var msg;
+    if(rango === "manana") msg = "🌅 No hay noticias del futuro 😉. Lo que viene está en el calendario de arriba.";
+    else if(rango === "sinfecha") msg = "📰 No hay portadas sin fecha ahora mismo.";
+    else if(rango === "ayer") msg = "📅 Sin noticias fechadas de ayer. Pulsa 🔎 Buscar (consulta Google News de los últimos 2 días).";
+    else if(textoBusqueda || chipSel) msg = "🔎 Nada coincide. Prueba 🔎 Buscar o ✕ para limpiar.";
+    else msg = "Sin noticias. Pulsa 🔄 Actualizar.";
+    cont.innerHTML = "<div class='estado'>" + msg + "</div>";
+    return;
+  }
+  var max = parseInt($("cantidad").value, 10) || 5;
+  l = l.slice(0, max);
+  cont.innerHTML = "";
+  l.forEach(function(n){
+    var a = analizarCon(n.titulo, ctx.reglas);
+    var d = document.createElement("div");
+    d.className = "card " + CLASE_V[a.dir];
+    var ver = TEXTO_V[a.dir];
+    if(a.dir !== "NEUTRO") ver += " en " + ctx.sujeto;
+    var fechaTxt = n.fecha
+      ? n.fecha.toLocaleString("es-ES", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }) + " · " + hace(n.fecha)
+      : "🗓️ sin fecha en portada (ábrela para confirmar)";
+    d.innerHTML =
+      '<div class="cabecera">' +
+        '<span class="veredicto">' + esc(ver) + '</span>' +
+        '<span class="fuerza">Fuerza: ' + (a.score > 0 ? "+" : "") + a.score + ' · Rel ' + n.rel + '</span>' +
+      '</div>' +
+      '<a class="titulo" href="' + esc(n.url) + '" target="_blank" rel="noopener">' + esc(n.titulo) + '</a>' +
+      '<div class="meta">' + esc(n.fuente) + ' · ' + fechaTxt + '</div>' +
+      (a.razones.length ? '<div class="razones">🔎 ' + esc(a.razones.join(" · ")) + '</div>' : "");
+    cont.appendChild(d);
+  });
+}
+function renderResumen(){
+  var panel = $("resumenIA");
+  if(!panel) return;
+  var ctx = contextoActual();
+  var l = listaFiltrada();
+  if(!l.length){ panel.style.display = "none"; return; }
+  var ver = l.map(function(n){
+    var a = analizarCon(n.titulo, ctx.reglas);
+    return { n:n, dir:a.dir, score:a.score, razones:a.razones };
+  });
+  var alc = ver.filter(function(v){ return v.dir === "ALCISTA"; }).length;
+  var baj = ver.filter(function(v){ return v.dir === "BAJISTA"; }).length;
+  var neu = ver.length - alc - baj;
+  var fuerza = 0;
+  ver.forEach(function(v){ fuerza += v.score; });
+  var dominio = alc > baj ? "COMPRA" : (baj > alc ? "VENTA" : "MIXTO");
+  var inten = Math.abs(fuerza) >= 10 ? "fuerte" : (Math.abs(fuerza) >= 5 ? "moderada" : "leve");
+  var top = ver.filter(function(v){ return v.score !== 0; })
+    .sort(function(a, b){ return Math.abs(b.score) - Math.abs(a.score); })
+    .slice(0, 3);
+  var motor = "Predominan titulares sin señal definida: cautela.";
+  if(top.length){
+    motor = top.map(function(v, i){
+      var cls = v.dir === "ALCISTA" ? "alcista" : (v.dir === "BAJISTA" ? "bajista" : "neutro");
+      var pal = v.dir === "ALCISTA" ? "compra" : (v.dir === "BAJISTA" ? "venta" : "neutro");
+      var tit = v.n.titulo.length > 90 ? v.n.titulo.slice(0, 90) + "…" : v.n.titulo;
+      var raz = v.razones.length ? v.razones[0].replace(/^[📈📉] /, "") : "";
+      return (i + 1) + ") «" + esc(tit) + "» → <b class='" + cls + "'>" + pal +
+             " (" + (v.score > 0 ? "+" : "") + v.score + ")</b>" + (raz ? " — " + esc(raz) : "");
+    }).join("<br>");
+  }
+  var prox = null, ahora = Date.now();
+  eventos.forEach(function(ev){
+    if(ev.fecha.getTime() > ahora){
+      if(!prox || ev.fecha < prox.fecha) prox = ev;
+    }
+  });
+  var proxTxt = "";
+  if(prox && (prox.fecha.getTime() - ahora) < 12 * 3600000){
+    proxTxt = "<br>⏰ Atención: en " + fmtCuenta(prox.fecha.getTime() - ahora) +
+      " hay evento " + esc(prox.moneda) + " «" + esc(prox.titulo) +
+      "» (impacto " + esc(prox.impacto) + ") que puede mover el mercado.";
+  }
+  var sesgo;
+  if(dominio === "COMPRA") sesgo = "<b class='alcista'>tendencia compradora</b>";
+  else if(dominio === "VENTA") sesgo = "<b class='bajista'>tendencia vendedora</b>";
+  else sesgo = "<b class='neutro'>señal mixta, sin dirección clara</b>";
+  panel.innerHTML =
+    "<h2 style='margin-top:4px'>🧠 Interpretación automática (" + esc(ctx.sujeto) + ")</h2>" +
+    "<div class='caja'>" +
+      "Sobre <b>" + ver.length + "</b> noticias: " + alc + " alcistas · " + baj +
+      " bajistas · " + neu + " neutras. Fuerza neta <b>" + (fuerza > 0 ? "+" : "") + fuerza +
+      "</b> → " + sesgo + " de intensidad " + inten + ".<br><br>" +
+      "<b>Titulares que mueven el sesgo:</b><br>" + motor + proxTxt +
+      "<div class='descargo'>Generado por reglas locales sobre titulares. NO es asesoramiento financiero.</div>" +
+    "</div>";
+  panel.style.display = "block";
+}
+
+/* ============ 15. CHIPS DE ACTIVOS ============ */
+function pintarChips(){
+  var cont = $("chips");
+  var html = '<button class="chip activo" data-a="">Todo</button>';
+  ACTIVOS.forEach(function(a){
+    html += '<button class="chip" data-a="' + esc(a.et) + '">' + esc(a.et) + '</button>';
+  });
+  cont.innerHTML = html;
+  Array.prototype.forEach.call(cont.querySelectorAll(".chip"), function(b){
+    b.onclick = function(){
+      var et = b.getAttribute("data-a");
+      if(chipSel === et){
+        chipSel = "";
+        $("buscador").value = "";
+        textoBusqueda = "";
+      }else{
+        chipSel = et;
+        var a = activoSeleccionado();
+        $("buscador").value = a ? a.et.replace(/^[^ ]+ /, "") : "";
+        textoBusqueda = $("buscador").value;
+        ejecutarBusqueda();
+      }
+      Array.prototype.forEach.call(cont.querySelectorAll(".chip"), function(x){
+        x.className = (x.getAttribute("data-a") === chipSel) ? "chip activo" : "chip";
+      });
+      renderNoticias();
+      renderResumen();
+    };
+  });
+}
+function setRango(r){
+  rango = r;
+  Array.prototype.forEach.call(document.querySelectorAll(".rango"), function(x){
+    x.className = (x.getAttribute("data-r") === r) ? "rango activo" : "rango";
+  });
+}
+
+/* ============ 16. DIAGNÓSTICO ============ */
+ $("btnDiag").onclick = async function(){
+  var out = $("diagSalida");
+  out.innerHTML = "<div class='estado'>Probando canales en paralelo…</div>";
+  var pruebas = [
+    { c:"Calendario", u:CALENDARIOS[0].url, x:extraerJSON },
+    { c:"Kitco HTML", u:FUENTES_HTML[0].url, x:extraerTexto },
+    { c:"Google RSS", u:FEED_RSS_ORO, x:extraerXML }
+  ];
+  var filas = await Promise.all(CANALES.map(function(c){
+    return Promise.all(pruebas.map(function(p){
+      var t0 = performance.now();
+      return intentoCanal(c, p.u).then(function(t){
+        var ms = Math.round(performance.now() - t0);
+        return p.x(t) ? ("<td>✅ " + ms + " ms</td>") : "<td>⚠️ inválido</td>";
+      }, function(e){
+        return "<td>❌ " + esc(msgErr(e)) + "</td>";
+      });
+    })).then(function(cels){
+      return "<tr><td>" + esc(c.nombre) + "</td>" + cels.join("") + "</tr>";
+    });
+  }));
+  out.innerHTML =
+    "<table><thead><tr><th>Canal</th>" +
+    pruebas.map(function(p){ return "<th>" + p.c + "</th>"; }).join("") +
+    "</tr></thead><tbody>" + filas.join("") + "</tbody></table>" +
+    "<div class='estado' style='margin-top:6px'>Basta con una ✅ en Calendario y una ✅ en Kitco (aunque sean canales distintos). La búsqueda en vivo usa rss2json/Google.</div>";
+};
+ $("btnReset").onclick = function(){
+  cacheBorrar();
+  $("diagSalida").innerHTML = "<div class='estado'>🩹 Caché borrada. Recarga la página para empezar de cero.</div>";
+};
+
+/* ============ 17. BOTONES ============ */
+ $("btnPermitir").onclick = async function(){
+  if(!window.Notification){
+    $("estado").textContent = "Sin soporte de notificaciones (el sonido sí funcionará)";
+    return;
+  }
+  try{
+    var p = await Notification.requestPermission();
+    $("estado").textContent = p === "granted" ? "🔔 Notificaciones activadas" : "Notificaciones bloqueadas";
+  }catch(e){
+    $("estado").textContent = "No se pudo pedir permiso";
+  }
+};
+ $("btnProbar").onclick = function(){
+  sonarAlarma();
+  if(window.Notification && Notification.permission === "granted"){
+    try{ new Notification("Prueba ✔", { body:"Alarma y notificaciones funcionan." }); }catch(e){}
+  }
+};
+ $("btnSilenciar").onclick = function(){
+  silenciado = !silenciado;
+  this.textContent = silenciado ? "🔇 Silenciado" : "🔕 Silenciar";
+  this.className = silenciado ? "silencio" : "";
+};
+ $("btnRecargar").onclick = function(){ cargarCalendario(); };
+ $("btnNoticias").onclick = function(){ cargarNoticias(); };
+ $("btnBuscar").onclick = function(){ ejecutarBusqueda(); };
+ $("btnIA").onclick = function(){
+  renderResumen();
+  var p = $("resumenIA");
+  if(p.style.display !== "none") p.scrollIntoView({ behavior:"smooth" });
+};
+ $("btnLimpiar").onclick = function(){
+  filtroEvento = null; chipSel = ""; textoBusqueda = "";
+  $("buscador").value = "";
+  Array.prototype.forEach.call(document.querySelectorAll(".chip"), function(x){
+    x.className = (x.getAttribute("data-a") === "") ? "chip activo" : "chip";
+  });
+  renderNoticias();
+  $("resumenIA").style.display = "none";
+};
+ $("buscador").addEventListener("keydown", function(e){
+  if(e.key === "Enter") ejecutarBusqueda();
+});
+ $("buscador").addEventListener("input", function(){
+  textoBusqueda = $("buscador").value.trim();
+  filtroEvento = null;
+  renderNoticias();
+});
+ $("cantidad").onchange = function(){ renderNoticias(); };
+ $("chkOro").onchange = function(){ pintarTabla(); };
+ $("antelacion").onchange = function(){ pintarTabla(); };
+Array.prototype.forEach.call(document.querySelectorAll(".imp,.mon"), function(el){
+  el.onchange = function(){ pintarTabla(); };
+});
+Array.prototype.forEach.call(document.querySelectorAll(".rango"), function(b){
+  b.onclick = function(){
+    setRango(b.getAttribute("data-r"));
+    renderNoticias();
+  };
+});
+
+/* ============ 18. RELOJ E INICIO ============ */
+setInterval(function(){
+  var r = $("reloj");
+  if(r) r.textContent = new Date().toLocaleTimeString("es-ES");
+  pintarTabla();
+  comprobarAlertas();
+}, 1000);
+
+try{
+  pintarChips();
+  paso("✓ interfaz");
+}catch(e){ paso("⛔ interfaz: " + e.message, true); }
+
+try{
+  var c1 = cacheLeer("oro2_cal");
+  if(c1){
+    eventos = revivir(c1.datos);
+    $("estado").textContent = "📦 caché " + new Date(c1.ts).toLocaleString("es-ES") + " · buscando datos frescos…";
+  }
+  var c2 = cacheLeer("oro2_not");
+  if(c2) noticias = revivir(c2.datos);
+  recalcularCoincidencias();
+  pintarTabla();
+  renderNoticias();
+  paso("✓ caché");
+}catch(e){ paso("⛔ caché: " + e.message, true); }
+
+try{
+  cargarCalendario();
+  cargarNoticias();
+  paso("⏳ cargando datos…");
+}catch(e){ paso("⛔ arranque: " + e.message, true); }
+</script>
+</body>
+</html>
